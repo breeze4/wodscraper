@@ -9,36 +9,48 @@
 
 (def base-url "http://www.crossfit.com/mt-archive2/00")
 (def html-suffix ".html")
-(def start 2668)
-(def end 9609)
+(def start-1 2668)
+;(def end-1 2658)
+(def end-1 1754)
+;(def end 9609)
+;(def end 2678)
 
 (defn build-url [num]
   (str base-url num html-suffix))
 
 ;; ((((((((((p 3) 2) 3) 2) 2) 2) 2) 2) 3) 3) for blogbody
 
+(defn get-page [url]
+  (try
+    (parse url)
+    (catch Exception e
+      (prn "caught" e)
+      "error")))
+
 (defn get-body-from-crossfit [url]
-  (let [page (parse url)
-        blogbody ((((((((((page 3) 2) 3) 2) 2) 2) 2) 2) 3) 3)]
-    blogbody))
+  (let [page (get-page url)]
+    (if (= "error" page)
+      "error"
+      ((((((((((page 3) 2) 3) 2) 2) 2) 2) 2) 3) 3))))
 
 (defn get-body-for-page [num]
   (let [url (build-url num)
-        ;body (get-body-from-crossfit url)
-        body "test"
+        body (get-body-from-crossfit url)
+        ;body "test"
         ]
     body))
 
-(defn download-pages []
-  (let [pages (map #(get-body-for-page %) (range start end))]
-    (prn (str "done with: " (count pages)))
-    nil))
+(defn store-pages [pages]
+  (let [conn (mg/connect)
+        db (mg/get-db conn "wodscraper")]
+    (map #(mc/insert-and-return db "body" {:body %}) pages)))
 
-;; localhost, default port
-(let [conn (mg/connect)
-      db   (mg/get-db conn "monger-test")]
-  ;; with a generated document id, returns the complete
-  ;; inserted document
-  (mc/insert-and-return db "documents" {:name "John" :age 30}))
+(defn download-pages [num-a num-b]
+  (let [start (min num-a num-b)
+        end (max num-a num-b)
+        pages (map #(get-body-for-page %) (range start end))]
+    (do
+      (prn (str "done with: " (count pages)))
+      (store-pages pages))))
 
 ;;
