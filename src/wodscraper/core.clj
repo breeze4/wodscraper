@@ -1,11 +1,13 @@
 (ns wodscraper.core
+
   (:require [pl.danieljanus.tagsoup :refer [parse]]
             [clojure.core.async
              :refer [>! <! >!! <!! put! take! go go-loop chan buffer close! thread
                      alts! alts!! timeout onto-chan pipeline]]
             [monger.core :as mg]
             [monger.collection :as mc])
-  (:import [com.mongodb MongoOptions ServerAddress]))
+  (:import [com.mongodb MongoOptions ServerAddress]
+           [java.util.concurrent Executors]))
 
 (def base-url "http://www.crossfit.com/mt-archive2/00")
 (def html-suffix ".html")
@@ -35,8 +37,8 @@
 
 (defn get-body-for-page [num]
   (let [url (build-url num)
-        body (get-body-from-crossfit url)
-        ;body "test"
+        ;body (get-body-from-crossfit url)
+        body "test"
         ]
     body))
 
@@ -52,5 +54,12 @@
     (do
       (prn (str "done with: " (count pages)))
       (store-pages pages))))
+
+(defn get-page-batch [url start end]
+  (let [pool (Executors/newFixedThreadPool 10)
+        tasks (map (fn [n] (prn (str "hi" n))) (range start end))]
+    (doseq [future (.invokeAll pool tasks)]
+      (.get future))
+    (.shutdown pool)))
 
 ;;
